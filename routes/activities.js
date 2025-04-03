@@ -1,195 +1,151 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../models/db');
-const { v4: uuidv4 } = require('uuid');
+
+// 模拟数据
+let activities = [
+  {
+    id: '1',
+    title: '春季户外徒步',
+    description: '欢迎参加我们的春季户外徒步活动，将在郊外进行一次轻松愉快的远足。',
+    location: '市郊森林公园',
+    startTime: '2025-04-15T09:00:00',
+    endTime: '2025-04-15T18:00:00',
+    creatorId: 'user1',
+    creatorName: '张三',
+    creatorAvatar: 'https://example.com/avatar1.jpg',
+    coverImage: 'https://example.com/hike.jpg',
+    category: '运动',
+    maxParticipants: 20,
+    participants: [],
+    createdAt: '2025-04-01T10:00:00'
+  },
+  {
+    id: '2',
+    title: '编程工作坊',
+    description: '学习最新的Web开发技术，从基础到高级的一系列课程。',
+    location: '创新中心',
+    startTime: '2025-04-20T14:00:00',
+    endTime: '2025-04-20T17:00:00',
+    creatorId: 'user2',
+    creatorName: '李四',
+    creatorAvatar: 'https://example.com/avatar2.jpg',
+    coverImage: 'https://example.com/coding.jpg',
+    category: '教育',
+    maxParticipants: 15,
+    participants: [],
+    createdAt: '2025-04-02T08:30:00'
+  }
+];
 
 // 获取活动列表
 router.get('/', (req, res) => {
-  res.json({ message: '活动列表API', data: [] });
+  res.json({ 
+    success: true, 
+    data: activities
+  });
 });
 
-// 获取活动详情
+// 获取单个活动详情
 router.get('/:id', (req, res) => {
-  res.json({ message: `获取活动${req.params.id}详情` });
+  const activity = activities.find(a => a.id === req.params.id);
+  
+  if (!activity) {
+    return res.status(404).json({ success: false, message: '活动不存在' });
+  }
+  
+  res.json({ success: true, data: activity });
 });
 
-// 创建活动
-router.post('/', async (req, res) => {
-  const conn = await db.getConnection();
+// 创建新活动
+router.post('/', (req, res) => {
   try {
-    await conn.beginTransaction();
+    const newActivity = {
+      id: Date.now().toString(),
+      ...req.body,
+      participants: [],
+      createdAt: new Date().toISOString()
+    };
     
-    const {
-      title, type, startTime, endTime, location,
-      maxParticipants, description, creator, media
-    } = req.body;
-    
-    // 验证必填字段
-    if (!title || !type || !startTime || !endTime || !location || !creator) {
-      return res.status(400).json({ error: '缺少必填字段' });
-    }
-    
-    // 生成活动ID
-    const activityId = `act_${Date.now()}_${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
-    
-    // 确保用户存在
-    const [users] = await conn.query('SELECT * FROM users WHERE id = ?', [creator.id]);
-    if (users.length === 0) {
-      await conn.query(`
-        INSERT INTO users (id, open_id, nick_name, avatar_url)
-        VALUES (?, ?, ?, ?)
-      `, [creator.id, creator.openId, creator.name, creator.avatar]);
-    }
-    
-    // 创建活动
-    await conn.query(`
-      INSERT INTO activities (
-        id, title, type, start_time, end_time,
-        location_name, location_address, location_coordinates,
-        max_participants, current_participants,
-        description, cover_image, status, creator_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      activityId, title, type, startTime, endTime,
-      location.name, location.address, JSON.stringify(location.coordinates || []),
-      maxParticipants || 0, 1, description,
-      media && media.length > 0 ? media[0].url : null,
-      'upcoming', creator.id
-    ]);
-    
-    // 添加媒体文件
-    if (media && media.length > 0) {
-      const mediaValues = media.map(item => [
-        activityId, item.type || 'image', item.url
-      ]);
-      
-      await conn.query(`
-        INSERT INTO activity_media (activity_id, type, url)
-        VALUES ?
-      `, [mediaValues]);
-    }
-    
-    // 添加创建者作为第一个参与者
-    await conn.query(`
-      INSERT INTO participants (activity_id, user_id)
-      VALUES (?, ?)
-    `, [activityId, creator.id]);
-    
-    await conn.commit();
-    res.status(201).json({
-      id: activityId,
-      message: '活动创建成功'
-    });
+    activities.push(newActivity);
+    res.status(201).json({ success: true, data: newActivity });
   } catch (error) {
-    await conn.rollback();
     console.error('创建活动失败:', error);
-    res.status(500).json({ error: '创建活动失败' });
-  } finally {
-    conn.release();
+    res.status(500).json({ success: false, message: '创建活动失败' });
   }
 });
 
-// 报名参加活动
-router.post('/:id/register', async (req, res) => {
-  const conn = await db.getConnection();
+// 注册参加活动
+router.post('/:id/register', (req, res) => {
   try {
-    await conn.beginTransaction();
+    const activity = activities.find(a => a.id === req.params.id);
     
-    const activityId = req.params.id;
-    const { userId } = req.body;
-    
-    if (!userId) {
-      return res.status(400).json({ error: '缺少用户ID' });
+    if (!activity) {
+      return res.status(404).json({ success: false, message: '活动不存在' });
     }
     
-    // 检查活动是否存在
-    const [activities] = await conn.query('SELECT * FROM activities WHERE id = ?', [activityId]);
-    if (activities.length === 0) {
-      return res.status(404).json({ error: '活动不存在' });
+    const { userId, userName, userAvatar } = req.body;
+    
+    if (!userId || !userName) {
+      return res.status(400).json({ success: false, message: '用户信息不完整' });
     }
     
-    const activity = activities[0];
-    
-    // 检查是否已报名
-    const [existingRegistrations] = await conn.query(
-      'SELECT * FROM participants WHERE activity_id = ? AND user_id = ?',
-      [activityId, userId]
-    );
-    
-    if (existingRegistrations.length > 0) {
-      return res.status(400).json({ error: '已经报名该活动' });
+    // 检查用户是否已经注册过
+    if (activity.participants.some(p => p.userId === userId)) {
+      return res.status(400).json({ success: false, message: '用户已经注册过此活动' });
     }
     
-    // 检查人数是否已满
-    if (activity.max_participants > 0 && activity.current_participants >= activity.max_participants) {
-      return res.status(400).json({ error: '活动人数已满' });
+    // 检查是否已达到最大参与人数
+    if (activity.maxParticipants && activity.participants.length >= activity.maxParticipants) {
+      return res.status(400).json({ success: false, message: '活动参与人数已满' });
     }
     
-    // 添加参与者
-    await conn.query(
-      'INSERT INTO participants (activity_id, user_id) VALUES (?, ?)',
-      [activityId, userId]
-    );
+    // 添加用户到参与者列表
+    activity.participants.push({
+      userId,
+      userName,
+      userAvatar: userAvatar || '',
+      registeredAt: new Date().toISOString()
+    });
     
-    // 更新活动参与人数
-    await conn.query(
-      'UPDATE activities SET current_participants = current_participants + 1 WHERE id = ?',
-      [activityId]
-    );
-    
-    await conn.commit();
-    res.json({ message: '报名成功' });
+    res.json({ success: true, message: '注册成功', data: activity });
   } catch (error) {
-    await conn.rollback();
-    console.error('报名活动失败:', error);
-    res.status(500).json({ error: '报名活动失败' });
-  } finally {
-    conn.release();
+    console.error('活动注册失败:', error);
+    res.status(500).json({ success: false, message: '活动注册失败' });
   }
 });
 
-// 活动签到
-router.post('/:id/checkin', async (req, res) => {
+// 签到
+router.post('/:id/checkin', (req, res) => {
   try {
-    const activityId = req.params.id;
+    const activity = activities.find(a => a.id === req.params.id);
+    
+    if (!activity) {
+      return res.status(404).json({ success: false, message: '活动不存在' });
+    }
+    
     const { userId } = req.body;
     
     if (!userId) {
-      return res.status(400).json({ error: '缺少用户ID' });
+      return res.status(400).json({ success: false, message: '用户ID不能为空' });
     }
     
-    // 检查是否已报名
-    const [participants] = await db.query(
-      'SELECT * FROM participants WHERE activity_id = ? AND user_id = ?',
-      [activityId, userId]
-    );
-    
-    if (participants.length === 0) {
-      return res.status(400).json({ error: '未报名该活动，无法签到' });
+    // 检查用户是否已注册
+    const participant = activity.participants.find(p => p.userId === userId);
+    if (!participant) {
+      return res.status(400).json({ success: false, message: '用户未注册此活动' });
     }
     
-    // 检查是否已签到
-    const [checkIns] = await db.query(
-      'SELECT * FROM check_ins WHERE activity_id = ? AND user_id = ?',
-      [activityId, userId]
-    );
+    // 标记签到
+    participant.checkedIn = true;
+    participant.checkinTime = new Date().toISOString();
     
-    if (checkIns.length > 0) {
-      return res.status(400).json({ error: '已经签到过了' });
-    }
-    
-    // 添加签到记录
-    const checkInId = `checkin_${Date.now()}`;
-    await db.query(
-      'INSERT INTO check_ins (id, activity_id, user_id) VALUES (?, ?, ?)',
-      [checkInId, activityId, userId]
-    );
-    
-    res.json({ message: '签到成功' });
+    res.json({ success: true, message: '签到成功' });
   } catch (error) {
-    console.error('活动签到失败:', error);
-    res.status(500).json({ error: '活动签到失败' });
+    console.error('签到失败:', error);
+    res.status(500).json({ success: false, message: '签到失败' });
   }
 });
 
 module.exports = router;
+// 导出activities供其他模块使用
+module.exports.activities = activities;

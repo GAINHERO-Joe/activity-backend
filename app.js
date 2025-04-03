@@ -2,6 +2,11 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 
+// 导入路由
+const activityRoutes = require('./routes/activities');
+const userRoutes = require('./routes/users');
+const commentRoutes = require('./routes/comments');
+
 // 创建Express应用实例
 const app = express();
 
@@ -23,6 +28,14 @@ app.get('/api/test', (req, res) => {
     serverTime: new Date().toISOString()
   });
 });
+
+// 注册API路由
+app.use('/api/activities', activityRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/comments', commentRoutes);
+
+// 在全局范围共享数据(仅用于演示)
+global.activities = require('./routes/activities').activities;
 
 // 404处理
 app.use((req, res, next) => {

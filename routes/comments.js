@@ -1,112 +1,148 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../models/db');
+
+// 模拟数据
+let comments = [
+  {
+    id: 'comment1',
+    activityId: '1',
+    userId: 'user2',
+    userName: '李四',
+    userAvatar: 'https://example.com/avatar2.jpg',
+    content: '这个活动看起来很有趣，期待参加！',
+    createdAt: '2025-04-05T09:30:00',
+    likes: 0
+  },
+  {
+    id: 'comment2',
+    activityId: '1',
+    userId: 'user1',
+    userName: '张三',
+    userAvatar: 'https://example.com/avatar1.jpg',
+    content: '欢迎大家参加这个活动，有任何问题可以在评论区提问。',
+    createdAt: '2025-04-05T10:15:00',
+    likes: 2
+  },
+  {
+    id: 'comment3',
+    activityId: '2',
+    userId: 'user1',
+    userName: '张三',
+    userAvatar: 'https://example.com/avatar1.jpg',
+    content: '这个编程工作坊适合初学者吗？',
+    createdAt: '2025-04-06T08:45:00',
+    likes: 0
+  }
+];
 
 // 获取活动评论
-router.get('/', async (req, res) => {
+router.get('/activity/:activityId', (req, res) => {
   try {
-    const { activityId } = req.query;
+    const activityId = req.params.activityId;
+    const activityComments = comments.filter(c => c.activityId === activityId);
     
-    if (!activityId) {
-      return res.status(400).json({ error: '缺少活动ID参数' });
-    }
+    // 按时间排序，最新的在前
+    activityComments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     
-    const [comments] = await db.query(`
-      SELECT c.*, u.nick_name, u.avatar_url 
-      FROM comments c
-      JOIN users u ON c.user_id = u.id
-      WHERE c.activity_id = ?
-      ORDER BY c.created_at DESC
-    `, [activityId]);
-    
-    // 获取评论的媒体文件
-    const commentIds = comments.map(c => c.id);
-    let commentMedia = [];
-    
-    if (commentIds.length > 0) {
-      const [media] = await db.query(`
-        SELECT * FROM comment_media 
-        WHERE comment_id IN (?)
-      `, [commentIds]);
-      
-      commentMedia = media;
-    }
-    
-    // 构建返回数据，包含评论和对应的媒体文件
-    const result = comments.map(comment => ({
-      id: comment.id,
-      content: comment.content,
-      createdAt: comment.created_at,
-      user: {
-        id: comment.user_id,
-        name: comment.nick_name,
-        avatar: comment.avatar_url
-      },
-      media: commentMedia
-        .filter(m => m.comment_id === comment.id)
-        .map(m => ({ url: m.url }))
-    }));
-    
-    res.json(result);
+    res.json({ success: true, data: activityComments });
   } catch (error) {
     console.error('获取评论失败:', error);
-    res.status(500).json({ error: '获取评论失败' });
+    res.status(500).json({ success: false, message: '获取评论失败' });
   }
 });
 
 // 添加评论
-router.post('/', async (req, res) => {
-  const conn = await db.getConnection();
+router.post('/', (req, res) => {
   try {
-    await conn.beginTransaction();
-    
-    const { activityId, userId, content, media } = req.body;
+    const { activityId, userId, userName, userAvatar, content } = req.body;
     
     if (!activityId || !userId || !content) {
-      return res.status(400).json({ error: '缺少必要参数' });
+      return res.status(400).json({ success: false, message: '缺少必要参数' });
     }
     
-    // 检查活动是否存在
-    const [activities] = await conn.query('SELECT * FROM activities WHERE id = ?', [activityId]);
-    if (activities.length === 0) {
-      return res.status(404).json({ error: '活动不存在' });
-    }
+    // 创建新评论
+    const newComment = {
+      id: `comment${Date.now()}`,
+      activityId,
+      userId,
+      userName: userName || '匿名用户',
+      userAvatar: userAvatar || '',
+      content,
+      createdAt: new Date().toISOString(),
+      likes: 0
+    };
     
-    // 生成评论ID
-    const commentId = `comment_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    comments.push(newComment);
     
-    // 添加评论
-    await conn.query(`
-      INSERT INTO comments (id, activity_id, user_id, content)
-      VALUES (?, ?, ?, ?)
-    `, [commentId, activityId, userId, content]);
-    
-    // 添加评论媒体文件
-    if (media && media.length > 0) {
-      const mediaValues = media.map(item => [commentId, item.url]);
-      
-      await conn.query(`
-        INSERT INTO comment_media (comment_id, url)
-        VALUES ?
-      `, [mediaValues]);
-    }
-    
-    await conn.commit();
-    res.status(201).json({
-      id: commentId,
-      message: '评论添加成功'
-    });
+    res.status(201).json({ success: true, data: newComment });
   } catch (error) {
-    await conn.rollback();
     console.error('添加评论失败:', error);
-    res.status(500).json({ error: '添加评论失败' });
-  } finally {
-    conn.release();
+    res.status(500).json({ success: false, message: '添加评论失败' });
   }
 });
 
-router.get('/', (req, res) => {
-  res.json({ message: '评论列表', data: [] });
+// 删除评论
+router.delete('/:id', (req, res) => {
+  try {
+    const commentId = req.params.id;
+    const userId = req.query.userId; // 通常从认证中获取
+    
+    if (!userId) {
+      return res.status(400).json({ success: false, message: '需要用户ID' });
+    }
+    
+    const commentIndex = comments.findIndex(c => c.id === commentId);
+    
+    if (commentIndex === -1) {
+      return res.status(404).json({ success: false, message: '评论不存在' });
+    }
+    
+    const comment = comments[commentIndex];
+    
+    // 只有评论作者才能删除评论
+    if (comment.userId !== userId) {
+      return res.status(403).json({ success: false, message: '无权删除此评论' });
+    }
+    
+    // 删除评论
+    comments.splice(commentIndex, 1);
+    
+    res.json({ success: true, message: '评论已删除' });
+  } catch (error) {
+    console.error('删除评论失败:', error);
+    res.status(500).json({ success: false, message: '删除评论失败' });
+  }
+});
+
+// 点赞评论
+router.post('/:id/like', (req, res) => {
+  try {
+    const commentId = req.params.id;
+    const userId = req.body.userId;
+    
+    if (!userId) {
+      return res.status(400).json({ success: false, message: '需要用户ID' });
+    }
+    
+    const commentIndex = comments.findIndex(c => c.id === commentId);
+    
+    if (commentIndex === -1) {
+      return res.status(404).json({ success: false, message: '评论不存在' });
+    }
+    
+    // 简单实现：直接增加点赞数
+    // 实际应用中应该记录哪些用户点赞过，防止重复点赞
+    comments[commentIndex].likes += 1;
+    
+    res.json({ 
+      success: true, 
+      message: '点赞成功', 
+      data: { likes: comments[commentIndex].likes } 
+    });
+  } catch (error) {
+    console.error('点赞失败:', error);
+    res.status(500).json({ success: false, message: '点赞失败' });
+  }
 });
 
 module.exports = router;
