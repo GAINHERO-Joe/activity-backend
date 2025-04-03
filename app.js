@@ -6,9 +6,9 @@ const bodyParser = require('body-parser');
 const fileUpload = require('express-fileupload');
 
 // 导入路由
-const activityRoutes = require('./routes/activities');
-const userRoutes = require('./routes/users');
-const commentRoutes = require('./routes/comments');
+// const activityRoutes = require('./routes/activities');
+// const userRoutes = require('./routes/users');
+// const commentRoutes = require('./routes/comments');
 
 // 创建Express应用实例
 const app = express();
@@ -28,9 +28,9 @@ app.get('/', (req, res) => {
 });
 
 // 注册API路由
-app.use('/api/activities', activityRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/comments', commentRoutes);
+// app.use('/api/activities', activityRoutes);
+// app.use('/api/users', userRoutes);
+// app.use('/api/comments', commentRoutes);
 
 // 上传文件接口
 app.post('/api/upload', (req, res) => {
