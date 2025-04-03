@@ -12,7 +12,8 @@
   "dependencies": {
     "express": "^4.17.1",
     "cors": "^2.8.5",
-    "body-parser": "^1.19.0"
+    "body-parser": "^1.19.0",
+    "express-fileupload": "^1.4.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.15"
