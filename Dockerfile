@@ -31,5 +31,8 @@ COPY . .
 # 暴露端口
 EXPOSE 80
 
+# 环境变量
+ENV PORT=80
+
 # 启动命令
 CMD ["node", "app.js"]
