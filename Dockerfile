@@ -15,6 +15,10 @@ RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tencent.com/g' /etc/apk/repositorie
 # 创建工作目录
 WORKDIR /app
 
+# 创建证书目录，此目录需要存在，微信云托管会使用它
+RUN mkdir -p /app/cert
+RUN chmod -R 755 /app/cert
+
 # 复制package.json和package-lock.json
 COPY package*.json ./
 
@@ -36,4 +40,4 @@ ENV NODE_ENV=production
 ENV DEBUG=express:*
 
 # 启动命令
-CMD ["sh", "-c", "node app.js 2>&1 | tee /tmp/app.log"]
+CMD ["node", "app.js"]

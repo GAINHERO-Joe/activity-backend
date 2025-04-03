@@ -4,7 +4,8 @@
   "description": "活动小程序后端服务",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "dev": "nodemon app.js"
   },
   "author": "",
   "license": "Apache-2.0",
