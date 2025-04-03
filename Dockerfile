@@ -33,6 +33,8 @@ EXPOSE 80
 
 # 环境变量
 ENV PORT=80
+ENV NODE_ENV=production
+ENV DEBUG=express:*
 
 # 启动命令
-CMD ["node", "app.js"]
+CMD ["sh", "-c", "node app.js 2>&1 | tee /tmp/app.log"]

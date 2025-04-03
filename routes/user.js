@@ -65,56 +65,8 @@ router.post('/login', async (req, res) => {
 });
 
 // 获取用户信息
-router.get('/:id', async (req, res) => {
-  try {
-    const userId = req.params.id;
-    
-    const [users] = await db.query('SELECT * FROM users WHERE id = ?', [userId]);
-    
-    if (users.length === 0) {
-      return res.status(404).json({ error: '用户不存在' });
-    }
-    
-    const user = users[0];
-    
-    // 查询用户创建的活动
-    const [createdActivities] = await db.query(`
-      SELECT * FROM activities WHERE creator_id = ? ORDER BY created_at DESC LIMIT 10
-    `, [userId]);
-    
-    // 查询用户参与的活动
-    const [participatedActivities] = await db.query(`
-      SELECT a.* FROM activities a
-      JOIN participants p ON a.id = p.activity_id
-      WHERE p.user_id = ? AND a.creator_id != ?
-      ORDER BY p.join_time DESC LIMIT 10
-    `, [userId, userId]);
-    
-    res.json({
-      id: user.id,
-      openId: user.open_id,
-      nickName: user.nick_name,
-      avatar: user.avatar_url,
-      role: user.role,
-      createdActivities: createdActivities.map(a => ({
-        id: a.id,
-        title: a.title,
-        type: a.type,
-        coverImage: a.cover_image,
-        startTime: a.start_time
-      })),
-      participatedActivities: participatedActivities.map(a => ({
-        id: a.id,
-        title: a.title,
-        type: a.type,
-        coverImage: a.cover_image,
-        startTime: a.start_time
-      }))
-    });
-  } catch (error) {
-    console.error('获取用户信息失败:', error);
-    res.status(500).json({ error: '获取用户信息失败' });
-  }
+router.get('/:id', (req, res) => {
+  res.json({ message: `获取用户${req.params.id}信息` });
 });
 
 // 更新用户信息

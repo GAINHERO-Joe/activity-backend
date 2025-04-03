@@ -105,4 +105,8 @@ router.post('/', async (req, res) => {
   }
 });
 
+router.get('/', (req, res) => {
+  res.json({ message: '评论列表', data: [] });
+});
+
 module.exports = router;

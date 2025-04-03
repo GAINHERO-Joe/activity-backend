@@ -4,126 +4,13 @@ const db = require('../models/db');
 const { v4: uuidv4 } = require('uuid');
 
 // 获取活动列表
-router.get('/', async (req, res) => {
-  try {
-    // 使用查询参数过滤
-    const type = req.query.type;
-    const status = req.query.status;
-    const limit = parseInt(req.query.limit) || 20;
-    
-    let query = 'SELECT * FROM activities';
-    const queryParams = [];
-    
-    if (type) {
-      query += queryParams.length ? ' AND type = ?' : ' WHERE type = ?';
-      queryParams.push(type);
-    }
-    
-    if (status) {
-      query += queryParams.length ? ' AND status = ?' : ' WHERE status = ?';
-      queryParams.push(status);
-    }
-    
-    query += ' ORDER BY created_at DESC LIMIT ?';
-    queryParams.push(limit);
-    
-    const [activities] = await db.query(query, queryParams);
-    
-    res.json(activities.map(activity => ({
-      id: activity.id,
-      title: activity.title,
-      type: activity.type,
-      startTime: activity.start_time,
-      endTime: activity.end_time,
-      location: {
-        name: activity.location_name,
-        address: activity.location_address
-      },
-      coverImage: activity.cover_image,
-      maxParticipants: activity.max_participants,
-      currentParticipants: activity.current_participants,
-      status: activity.status,
-      createdAt: activity.created_at,
-      creatorId: activity.creator_id
-    })));
-  } catch (error) {
-    console.error('获取活动列表失败:', error);
-    res.status(500).json({ error: '获取活动列表失败' });
-  }
+router.get('/', (req, res) => {
+  res.json({ message: '活动列表API', data: [] });
 });
 
 // 获取活动详情
-router.get('/:id', async (req, res) => {
-  try {
-    const activityId = req.params.id;
-    
-    // 获取活动基本信息
-    const [activities] = await db.query(`
-      SELECT a.*, u.nick_name as creator_name, u.avatar_url as creator_avatar, u.open_id as creator_open_id
-      FROM activities a
-      LEFT JOIN users u ON a.creator_id = u.id
-      WHERE a.id = ?
-    `, [activityId]);
-    
-    if (activities.length === 0) {
-      return res.status(404).json({ error: '活动不存在' });
-    }
-    
-    const activity = activities[0];
-    
-    // 获取活动图片
-    const [media] = await db.query(`
-      SELECT * FROM activity_media WHERE activity_id = ?
-    `, [activityId]);
-    
-    // 获取参与者
-    const [participants] = await db.query(`
-      SELECT p.*, u.nick_name, u.avatar_url
-      FROM participants p
-      LEFT JOIN users u ON p.user_id = u.id
-      WHERE p.activity_id = ?
-    `, [activityId]);
-    
-    // 构建返回数据
-    const result = {
-      id: activity.id,
-      title: activity.title,
-      type: activity.type,
-      startTime: activity.start_time,
-      endTime: activity.end_time,
-      location: {
-        name: activity.location_name,
-        address: activity.location_address,
-        coordinates: JSON.parse(activity.location_coordinates || '[]')
-      },
-      maxParticipants: activity.max_participants,
-      currentParticipants: activity.current_participants,
-      description: activity.description,
-      status: activity.status,
-      createdAt: activity.created_at,
-      creator: {
-        id: activity.creator_id,
-        openId: activity.creator_open_id,
-        name: activity.creator_name,
-        avatar: activity.creator_avatar
-      },
-      media: media.map(item => ({
-        type: item.type,
-        url: item.url
-      })),
-      participants: participants.map(p => ({
-        id: p.user_id,
-        name: p.nick_name,
-        avatar: p.avatar_url,
-        joinTime: p.join_time
-      }))
-    };
-    
-    res.json(result);
-  } catch (error) {
-    console.error('获取活动详情失败:', error);
-    res.status(500).json({ error: '获取活动详情失败' });
-  }
+router.get('/:id', (req, res) => {
+  res.json({ message: `获取活动${req.params.id}详情` });
 });
 
 // 创建活动
