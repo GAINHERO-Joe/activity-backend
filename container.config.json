@@ -11,7 +11,7 @@
   "cpu": 1,
   "mem": 2,
   "policyType": "cpu",
-  "policyThreshold": 80,
+  "policyThreshold": 60,
   "policyDetails": [
 	{
 		"PolicyType": "cpu",
@@ -22,12 +22,15 @@
 		"PolicyThreshold": 80
 	}
   ],
-  "envParams": {},
+  "envParams": {
+    "DB_HOST": "云托管内网连接地址",
+    "DB_USER": "root",
+    "DB_PASSWORD": "WvZHByZ3",
+    "DB_NAME": "wxcloud"
+  },
   "customLogs": "stdout",
   "initialDelaySeconds": 2,
-  "dataBaseName": "nodejs_demo",
-  "executeSQLs": [
-    "CREATE DATABASE IF NOT EXISTS nodejs_demo;",
-    "USE nodejs_demo;"
-  ]
+  "mountVolumeInfo": [],
+  "dataBaseName": "wxcloud",
+  "executeSQLs": []
 }
