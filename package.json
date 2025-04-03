@@ -1,21 +1,25 @@
 {
-  "name": "wxcloudrun-express",
+  "name": "activity-backend",
   "version": "1.0.0",
-  "description": "微信云托管 express 框架模版",
-  "main": "index.js",
+  "description": "活动小程序后端服务",
+  "main": "app.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node app.js",
+    "dev": "nodemon app.js"
   },
   "author": "",
   "license": "Apache-2.0",
   "dependencies": {
+    "body-parser": "^1.19.0",
     "cors": "^2.8.5",
-    "express": "^4.16.4",
-    "express-fileupload": "^1.5.1",
+    "express": "^4.17.1",
+    "express-fileupload": "^1.4.0",
     "morgan": "^1.10.0",
     "mysql2": "^2.3.3",
-    "sequelize": "^6.8.0",
-    "uuid": "^11.1.0"
+    "uuid": "^8.3.2"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.15"
   },
   "engines": {
     "node": ">=12.0.0"
